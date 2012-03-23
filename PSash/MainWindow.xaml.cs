@@ -102,37 +102,73 @@ namespace PSash
         #endregion
 
         #region input management
-        private Run _currentRun;
-        private Run CurrentRun
+        private Run _currentInput;
+        private Run CurrentInput
         {
             get
             {
-                return _currentRun;
+                return _currentInput;
             }
             set
             {
-                _currentRun = value;
-                _currentRun.Background = SystemColors.HighlightBrush;
-                _currentRun.Foreground = SystemColors.HighlightTextBrush;
+                _currentInput = value;
+                _currentInput.Background = SystemColors.HighlightBrush;
+                _currentInput.Foreground = SystemColors.HighlightTextBrush;
             }
         }
 
         private string GetCurrentInput()
         {
-            string input = String.Empty;
-            var text = Editor.Selection;
-            if (text.IsEmpty)
+            CreateCurrentInput(Editor.Selection.IsEmpty ? GetCurrentLine() : Editor.Selection);
+            return CurrentInput.Text;
+        }
+
+        private TextRange GetCurrentLine()
+        {
+            TextRange inputRange;
+            var pointer = Editor.CaretPosition;
+            inputRange = GetInputLine(pointer);
+            return inputRange;
+        }
+
+        private TextRange GetInputLine(TextPointer pointer)
+        {
+            var nextStart = pointer.GetLineStartPosition(1);
+            var lineEnd = (nextStart ?? pointer.DocumentEnd).GetInsertionPosition(LogicalDirection.Backward);
+            var lineStart = pointer.GetLineStartPosition(0);
+            var prevEnd = lineStart.GetInsertionPosition(LogicalDirection.Backward);
+            if (GetLineNumber(prevEnd) != 0) //are we already at the beginning of the content?
+                lineStart = SearchBackwardsForLineContinuation(lineStart, prevEnd);
+            return new TextRange(lineStart, lineEnd);
+        }
+
+        private int GetLineNumber(TextPointer pointer)
+        {
+            int someBigNumber = int.MaxValue;
+            int lineMoved;
+            pointer.GetLineStartPosition(-someBigNumber, out lineMoved);
+            return -lineMoved;
+        }
+
+        private TextPointer SearchBackwardsForLineContinuation(TextPointer lineStart, TextPointer prevEnd)
+        {
+            TextRange endOfPreviousLine;
+            TextPointer frontEndOfPreviousLine = prevEnd;
+            do
             {
-                input = "Get-Process";
-            }
-            else
-            {
-                input = text.Text;
-                var start = text.Start;
-                text.Text = String.Empty;
-                CurrentRun = new Run(input, start);
-            }
-            return input;
+                frontEndOfPreviousLine = frontEndOfPreviousLine.GetPositionAtOffset(-1);
+                endOfPreviousLine = new TextRange(frontEndOfPreviousLine, prevEnd);
+            } while (String.IsNullOrWhiteSpace(endOfPreviousLine.Text));
+            if (endOfPreviousLine.Text[0] == '|')
+                lineStart = GetInputLine(frontEndOfPreviousLine).Start;
+            return lineStart;
+        }
+
+        private void CreateCurrentInput(TextRange range)
+        {
+            var text = range.Text;
+            range.Text = String.Empty;//.Start.DeleteTextInRun(text.Length); //TODO: would rather wrap the range in situ, but how?
+            CurrentInput = new Run(text, range.Start);
         }
         #endregion
 
