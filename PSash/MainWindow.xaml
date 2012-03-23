@@ -3,14 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None" ResizeMode="NoResize"
         AllowsTransparency="True" Background="Black" Opacity=".8"
-        Title="PSash" WindowState="Maximized">
+        Title="PSash" WindowState="Maximized" Topmost="True">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <ScrollViewer Grid.Column="0" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Hidden" Padding="20">
-            <RichTextBox x:Name="Editor" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Consolas">
+            <RichTextBox x:Name="Editor" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Consolas" CaretBrush="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}">
                 <FlowDocument PageWidth="{Binding ElementName=Editor, Path=ActualWidth}">
 
                 </FlowDocument>

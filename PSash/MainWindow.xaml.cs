@@ -167,7 +167,7 @@ namespace PSash
         private void CreateCurrentInput(TextRange range)
         {
             var text = range.Text;
-            range.Text = String.Empty;//.Start.DeleteTextInRun(text.Length); //TODO: would rather wrap the range in situ, but how?
+            range.Text = String.Empty;//TODO: would rather wrap the range in situ, but how?
             CurrentInput = new Run(text, range.Start);
         }
         #endregion
@@ -209,17 +209,32 @@ namespace PSash
                 ToggleVisibility();
                 handled = true;
             }
+            if (msg == App.NativeMethods.WM_SHOWME)
+            {
+                if (Visibility.Visible != Visibility) ToggleVisibility(fadeDurationMillis: 200);
+                handled = true;
+            }
             return IntPtr.Zero;
         }
 
-        private void ToggleVisibility()
+        protected override void OnDeactivated(EventArgs e)
         {
-            if (Visibility.Visible == Visibility) FadeOut();
-            else FadeIn();
+            base.OnDeactivated(e);
+            if(Visibility.Visible == Visibility) ToggleVisibility(fadeDurationMillis: 200);
         }
 
-        Duration fadeDuration = TimeSpan.FromMilliseconds(400);
-        private void FadeOut()
+        private void ToggleVisibility(int fadeDurationMillis = 400)
+        {
+            Duration fadeDuration = TimeSpan.FromMilliseconds(fadeDurationMillis);
+            if (Visibility.Visible == Visibility) FadeOut(fadeDuration);
+            else 
+            {
+                FadeIn(fadeDuration);
+                Activate();
+            };
+        }
+
+        private void FadeOut(Duration fadeDuration)
         {
             Blur();
             var fade = new DoubleAnimation(0, fadeDuration);
@@ -227,7 +242,7 @@ namespace PSash
             BeginAnimation(UIElement.OpacityProperty, fade);
         }
 
-        private void FadeIn()
+        private void FadeIn(Duration fadeDuration)
         {
             Visibility = Visibility.Visible;
             var anim = new DoubleAnimation(0, MaxOpacity, fadeDuration);

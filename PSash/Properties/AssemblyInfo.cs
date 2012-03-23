@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -53,3 +54,19 @@ using System.Windows;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("0.1.*")]
 [assembly: AssemblyFileVersion("0.1.*")]
+
+[assembly: Guid("aa7f71f6-99f3-4e05-b39e-01d197268c1d")]
+
+static class AssemblyInfo
+{
+    internal static Guid Guid
+    {
+        get
+        {
+            var guidAttribute = Assembly.GetEntryAssembly().GetCustomAttribute(typeof(GuidAttribute)) as GuidAttribute;
+            if (guidAttribute == null)
+                throw new Exception("Assembly does not contain GuidAttribute so Host InstanceId could not be determined");
+            return new Guid(guidAttribute.Value);
+        }
+    }
+}

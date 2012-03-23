@@ -11,6 +11,7 @@ using System.Threading;
 using System.Management.Automation;
 using System.Security;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace PSash
 {
@@ -109,10 +110,12 @@ namespace PSash
             throw new NotImplementedException();
         }
 
-        Guid _instanceId = Guid.NewGuid();
         public override Guid InstanceId
         {
-            get { return _instanceId; }
+            get
+            {
+                return AssemblyInfo.Guid;
+            }
         }
 
         const string NAME = "PSash";
