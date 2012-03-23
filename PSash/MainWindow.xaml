@@ -1,0 +1,29 @@
+﻿<Window x:Class="PSash.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" ResizeMode="NoResize"
+        AllowsTransparency="True" Background="Black" Opacity=".8"
+        Title="PSash" WindowState="Maximized">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <ScrollViewer Grid.Column="0" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Hidden" Padding="20">
+            <RichTextBox x:Name="Editor" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Consolas">
+                <FlowDocument PageWidth="{Binding ElementName=Editor, Path=ActualWidth}">
+
+                </FlowDocument>
+            </RichTextBox>
+        </ScrollViewer>
+        <ScrollViewer Grid.Column="1" ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Hidden" Padding="20">
+            <RichTextBox x:Name="Output" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Consolas" IsReadOnly="True" Focusable="False">
+                <FlowDocument PageWidth="{Binding ElementName=Editor, Path=ActualWidth}" Focusable="False">
+                    <Paragraph>Welcome to Psash</Paragraph>
+                    <Paragraph />
+                </FlowDocument>
+            </RichTextBox>
+        </ScrollViewer>
+    </Grid>
+
+</Window>
