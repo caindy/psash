@@ -12,11 +12,27 @@ using System.Management.Automation;
 using System.Security;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Windows.Controls;
+using System.Diagnostics;
 
 namespace PSash
 {
-    internal class PSashHost : PSHost, IHostSupportsInteractiveSession, IHostUISupportsMultipleChoiceSelection, IDisposable
+    internal class PSashHost : PSHost, IHostSupportsInteractiveSession, IDisposable
     {
+        public override PSHostUserInterface UI
+        {
+            get
+            {
+                return new PSashHostUIAdapter(_visualizationFactory.DefaultVisualizer);
+            }
+        }
+
+        private IVisualizationFactory _visualizationFactory;
+        public PSashHost(IVisualizationFactory visualizationFactory)
+        {
+            _visualizationFactory = visualizationFactory;
+        }
+
         #region runspaces
 
         private bool _disposed = false;
@@ -73,16 +89,45 @@ namespace PSash
         
         #endregion
 
-        public string Execute(string cmd)
+        private Collection<PSObject> exec(PowerShell pipeline, string cmd = "", IEnumerable<object> input = null, bool sendToDefault = false)
+        {
+            pipeline.Runspace = CurrentRunspace;
+            if(!String.IsNullOrEmpty(cmd))
+                pipeline.AddScript(cmd);
+
+            if (sendToDefault)
+            {
+                // Add the default outputter to the end of the pipe and then 
+                // call the MergeMyResults method to merge the output and 
+                // error streams from the pipeline. This will result in the 
+                // output being written using the PSHost and PSHostUserInterface 
+                // classes instead of returning objects to the host application.
+                pipeline.AddCommand("out-default");
+                pipeline.Commands.Commands[0].MergeMyResults(PipelineResultTypes.Error, PipelineResultTypes.Output);
+            }
+
+            // If there is any input pass it in, otherwise just invoke the
+            // the pipeline.
+            if (input == null)
+                return pipeline.Invoke();
+            else
+                return pipeline.Invoke(input);
+
+        }
+
+        public void Execute(string cmd)
         {
             var psashCmd = PSashCommands.From(cmd);
             if (psashCmd == null)
             {
-                var pipeline = CurrentRunspace.CreatePipeline(cmd, true);
-                var results = pipeline.Invoke();
-                return results.Aggregate(String.Empty, (s, p) => s + p.ToString() + Environment.NewLine);
+                using (var pipeline = PowerShell.Create())
+                {
+                    Runspaces.Clear();
+                    var result = exec(pipeline, cmd);
+                    exec(pipeline, input: result, sendToDefault: true);
+                }
             }
-            return ExecutePSashCommand(psashCmd);
+            ExecutePSashCommand(psashCmd);
         }
 
         private string ExecutePSashCommand(PSashCommands.PSashCommand psashCmd)
@@ -141,248 +186,9 @@ namespace PSash
                 Exit(this, exitCode);
         }
 
-        PSHostUserInterface hostUI = new PSashHostUI();
-        public override PSHostUserInterface UI
-        {
-            get 
-            { 
-                return hostUI; 
-            }
-        }
-
         public override Version Version
         {
             get { return Assembly.GetExecutingAssembly().GetName().Version; }
-        }
-
-        public Collection<int> PromptForChoice(string caption, string message, Collection<ChoiceDescription> choices, IEnumerable<int> defaultChoices)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal class PSashHostUI : PSHostUserInterface
-        {
-
-            public override Dictionary<string, PSObject> Prompt(string caption, string message, Collection<FieldDescription> descriptions)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override int PromptForChoice(string caption, string message, Collection<ChoiceDescription> choices, int defaultChoice)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName, PSCredentialTypes allowedCredentialTypes, PSCredentialUIOptions options)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override PSCredential PromptForCredential(string caption, string message, string userName, string targetName)
-            {
-                throw new NotImplementedException();
-            }
-
-            PSHostRawUserInterface _psashHostRawUI; 
-            public override PSHostRawUserInterface RawUI
-            {
-                get { return _psashHostRawUI ?? (_psashHostRawUI = new PSashHostRawUI()); }
-            }
-
-            public override string ReadLine()
-            {
-                throw new NotImplementedException();
-            }
-
-            public override SecureString ReadLineAsSecureString()
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void Write(ConsoleColor foregroundColor, ConsoleColor backgroundColor, string value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void Write(string value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void WriteDebugLine(string message)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void WriteErrorLine(string value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void WriteLine(string value)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void WriteProgress(long sourceId, ProgressRecord record)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void WriteVerboseLine(string message)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void WriteWarningLine(string message)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        internal class PSashHostRawUI : PSHostRawUserInterface
-        {
-
-            public override ConsoleColor BackgroundColor
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public override Size BufferSize
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public override Coordinates CursorPosition
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public override int CursorSize
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public override void FlushInputBuffer()
-            {
-                throw new NotImplementedException();
-            }
-
-            public override ConsoleColor ForegroundColor
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public override BufferCell[,] GetBufferContents(Rectangle rectangle)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override bool KeyAvailable
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            public override Size MaxPhysicalWindowSize
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            public override Size MaxWindowSize
-            {
-                get { throw new NotImplementedException(); }
-            }
-
-            public override KeyInfo ReadKey(ReadKeyOptions options)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void ScrollBufferContents(Rectangle source, Coordinates destination, Rectangle clip, BufferCell fill)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void SetBufferContents(Rectangle rectangle, BufferCell fill)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override void SetBufferContents(Coordinates origin, BufferCell[,] contents)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override Coordinates WindowPosition
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public override Size WindowSize
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-
-            public override string WindowTitle
-            {
-                get
-                {
-                    throw new NotImplementedException();
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
         }
     }
 }

@@ -31,6 +31,13 @@ namespace PSash
         public MainWindow()
         {
             InitializeComponent();
+#if DEBUG
+            AllowsTransparency = false;
+            Topmost = false;
+            ResizeMode = ResizeMode.CanResize;
+            WindowStyle = WindowStyle.ThreeDBorderWindow;
+            WindowState = WindowState.Normal;
+#endif
             Loaded += (_, __) =>
             {
                 MaxOpacity = Opacity;
@@ -112,8 +119,7 @@ namespace PSash
             set
             {
                 _currentInput = value;
-                _currentInput.Background = SystemColors.HighlightBrush;
-                _currentInput.Foreground = SystemColors.HighlightTextBrush;
+                _currentInput.FontStyle = FontStyles.Normal;
             }
         }
 
@@ -176,19 +182,13 @@ namespace PSash
         private PSashHost _psash;
         private void SetupPSash()
         {
-            _psash = new PSashHost();
+            _psash = new PSashHost(new VisualizationFactory(new VisualizationContainer(OutputContainer)));
             _psash.Exit += (_, i) => Environment.Exit(i);
-        }
-
-        protected override void OnClosed(EventArgs e)
-        {
-            _psash.Dispose();
-            base.OnClosed(e);
         }
 
         private void SendCommand()
         {
-            Output.AppendText(_psash.Execute(GetCurrentInput()));
+            _psash.Execute(GetCurrentInput());
         }
         #endregion
 

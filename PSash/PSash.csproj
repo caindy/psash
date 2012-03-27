@@ -73,11 +73,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ConsoleVisualizer.cs" />
     <Compile Include="PSashCommands.cs" />
     <Compile Include="PSashHost.cs" />
     <Compile Include="HotKeyWinApi.cs" />
+    <Compile Include="PSashHostRawUIAdapter.cs" />
+    <Compile Include="PSashHostUIAdapter.cs" />
     <Compile Include="PSashKeyBindings.cs" />
+    <Compile Include="ShellEditor.cs" />
     <Compile Include="ValueObject.cs" />
+    <Compile Include="VisualizationContainer.cs" />
+    <Compile Include="VisualizationFactory.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -90,6 +96,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Themes\Generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
