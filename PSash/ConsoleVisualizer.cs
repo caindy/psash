@@ -11,39 +11,39 @@ using System.Windows.Documents;
 
 namespace PSash
 {
-    class ConsoleVisualizer : IDefaultVisualizer
+    class ConsoleVisualizer : IConsoleWriter
     {
-        RichTextBox box;
+        RichTextBox _box;
         private IVisualizationContainer _container;
         public ConsoleVisualizer(IVisualizationContainer container)
         {
+            _container = container;
+        }
+
+        private void Initialize()
+        {
             var flowDoc = new FlowDocument
             {
-                PageWidth = container.Width,
-                Focusable = false
+                PageWidth = _container.Width
             };
-            box = new RichTextBox(flowDoc)
+            _box = new RichTextBox(flowDoc)
             {
-                Background = container.Background,
-                Foreground = container.Foreground,
+                Background = _container.Background,
+                Foreground = _container.Foreground,
                 BorderThickness = new Thickness(0d),
-                FontFamily = container.ConsoleFont,
-                IsReadOnly = true,
-                Focusable = false
+                FontFamily = _container.ConsoleFont,
+                IsReadOnly = true
             };
-            _container = container;
-
-            _container.Dispatcher.InvokeAsync(() =>
-            {
-                _container.AddNewVisualization(box);
-            });
+            _container.AddNewVisualization(_box);
         }
 
         public void Write(string s)
         {
             _container.Dispatcher.InvokeAsync(() =>
             {
-                box.AppendText(s);
+                if (_box == null)
+                    Initialize();
+                _box.AppendText(s);
             });
         }
 

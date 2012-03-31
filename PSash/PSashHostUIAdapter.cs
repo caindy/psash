@@ -20,12 +20,6 @@ namespace PSash
     /// </summary>
     internal class PSashHostUIAdapter : PSHostUserInterface, IHostUISupportsMultipleChoiceSelection
     {
-        private IConsoleWriter _writer;
-        public PSashHostUIAdapter(IConsoleWriter writer)
-        {
-            _writer = writer;
-        }
-
         /// <summary>
         /// Parse a string containing a hotkey character.
         /// Take a string of the form
@@ -142,9 +136,29 @@ namespace PSash
             Write(value);
         }
 
+        public PSashHostUIAdapter(IConsoleWriterProvider writerProvider)
+        {
+            _writerProvider = writerProvider;
+        }
+
+        private IConsoleWriter _writer;
+        private IConsoleWriterProvider _writerProvider;
+        private StringBuilder sb;
+        public void BeginExecutePipeline()
+        {
+            _writer = _writerProvider.ConsoleWriter;
+            sb = new StringBuilder();
+        }
+
+        public void EndExecutePipeline()
+        {
+            _writer.Write(sb.ToString());
+        }
+
+
         public override void Write(string value)
         {
-            _writer.Write(value);
+            sb.Append(value);
         }
 
         public override void WriteDebugLine(string message)

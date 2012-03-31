@@ -25,26 +25,22 @@ namespace PSash
         void Write(string value);
     }
 
-    public interface IDefaultVisualizer : IConsoleWriter { /* marker interface */ }
-
-    public interface IVisualizationFactory
+    public interface IConsoleWriterProvider
     {
-        IDefaultVisualizer DefaultVisualizer { get; }
+        IConsoleWriter ConsoleWriter { get; }
     }
 
-    internal class VisualizationFactory : IVisualizationFactory
+    internal class VisualizationFactory : IConsoleWriterProvider
     {
         private VisualizationContainer _visualizationContainer;
         public VisualizationFactory(VisualizationContainer visualizationContainer)
         {
             _visualizationContainer = visualizationContainer;
         }
-        public IDefaultVisualizer DefaultVisualizer
+
+        public IConsoleWriter ConsoleWriter
         {
-            get 
-            {
-                return new ConsoleVisualizer(_visualizationContainer);
-            }
+            get { return new ConsoleVisualizer(_visualizationContainer); }
         }
     }
 }

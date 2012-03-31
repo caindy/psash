@@ -9,8 +9,9 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
+        <Label Grid.Column="0" x:Name="Prompt" FontFamily="Consolas" Content="Loading..." Foreground="WhiteSmoke"/>
         <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden" Padding="20">
-            <RichTextBox x:Name="Editor" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Consolas" CaretBrush="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}" FontStyle="Italic">
+            <RichTextBox x:Name="Editor" Background="Transparent" Foreground="White" BorderThickness="0" FontFamily="Consolas" CaretBrush="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}" Height="{Binding ActualHeight, ElementName=grid, Mode=OneWay}">
                 <FlowDocument PageWidth="{Binding ElementName=Editor, Path=ActualWidth, Mode=OneWay}">
 
                 </FlowDocument>

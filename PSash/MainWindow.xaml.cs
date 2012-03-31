@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
@@ -10,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -31,6 +33,10 @@ namespace PSash
         public MainWindow()
         {
             InitializeComponent();
+        }
+
+        protected override void OnInitialized(EventArgs e)
+        {
 #if DEBUG
             AllowsTransparency = false;
             Topmost = false;
@@ -38,37 +44,40 @@ namespace PSash
             WindowStyle = WindowStyle.ThreeDBorderWindow;
             WindowState = WindowState.Normal;
 #endif
-            Loaded += (_, __) =>
+            MaxOpacity = Opacity;
+            EnterInsertMode();
+            _keyBindings = new ViBindings();
+            Editor.PreviewKeyDown += CaptureSendCommand;
+            //EventManager.RegisterClassHandler(typeof(UIElement), UIElement.PreviewKeyUpEvent,
+            //    new RoutedEventHandler(RedirectAllInputToEditor), handledEventsToo: false);
+            Editor.PreviewLostKeyboardFocus += (_, __) => ExitInsertMode();
+            SetupPSash();
+            _psash.Runspace.AvailabilityChanged += (_, ev) =>
             {
-                MaxOpacity = Opacity;
-                SetupPSash();
-                EnterInsertMode();
-                _keyBindings = new ViBindings();
-                Editor.PreviewKeyDown += CaptureSendCommand;
+                if(ev.RunspaceAvailability == RunspaceAvailability.Available)
+                   Dispatcher.InvokeAsync(() => SetCurrentLocation());
             };
+            base.OnInitialized(e);
+        }
+
+        private void SetCurrentLocation()
+        {
+            Prompt.Content = _psash.Runspace.SessionStateProxy.Path.CurrentLocation;
         }
 
         #region key bindings
-
-        void PreventLosingKeyboardFocus(object sender, RoutedEventArgs r)
-        {
-            r.Handled = true;
-        }
-
         void ExitInsertMode()
         {
-            Editor.PreviewLostKeyboardFocus -= PreventLosingKeyboardFocus;
-            Editor.PreviewKeyUp -= CaptureEscapeInsertMode;
-            Editor.PreviewKeyUp += CaptureEnterInsertMode;
+            this.PreviewKeyUp -= CaptureEscapeInsertMode;
+            this.PreviewKeyUp += CaptureEnterInsertMode;
             Editor.IsReadOnly = Editor.IsReadOnlyCaretVisible = true;
         }
 
         void EnterInsertMode()
         {
             Editor.IsReadOnly = Editor.IsReadOnlyCaretVisible = false;
-            Editor.PreviewLostKeyboardFocus += PreventLosingKeyboardFocus;
-            Editor.PreviewKeyUp += CaptureEscapeInsertMode;
-            Editor.PreviewKeyUp -= CaptureEnterInsertMode;
+            this.PreviewKeyUp += CaptureEscapeInsertMode;
+            this.PreviewKeyUp -= CaptureEnterInsertMode;
             Editor.Focus();
         }
 
@@ -104,6 +113,7 @@ namespace PSash
             {
                 e.Handled = true;
                 SendCommand();
+                SetCurrentLocation();
             }
         }
         #endregion
@@ -119,7 +129,6 @@ namespace PSash
             set
             {
                 _currentInput = value;
-                _currentInput.FontStyle = FontStyles.Normal;
             }
         }
 
@@ -158,14 +167,16 @@ namespace PSash
 
         private TextPointer SearchBackwardsForLineContinuation(TextPointer lineStart, TextPointer prevEnd)
         {
-            TextRange endOfPreviousLine;
+            TextRange endOfPreviousLine = null;
             TextPointer frontEndOfPreviousLine = prevEnd;
             do
             {
                 frontEndOfPreviousLine = frontEndOfPreviousLine.GetPositionAtOffset(-1);
+                if (frontEndOfPreviousLine == null) //reached beginning of document
+                    break;
                 endOfPreviousLine = new TextRange(frontEndOfPreviousLine, prevEnd);
             } while (String.IsNullOrWhiteSpace(endOfPreviousLine.Text));
-            if (endOfPreviousLine.Text[0] == '|')
+            if (endOfPreviousLine != null && endOfPreviousLine.Text[0] == '|')
                 lineStart = GetInputLine(frontEndOfPreviousLine).Start;
             return lineStart;
         }
@@ -188,7 +199,11 @@ namespace PSash
 
         private void SendCommand()
         {
-            _psash.Execute(GetCurrentInput());
+            var input = GetCurrentInput();
+            if (String.IsNullOrWhiteSpace(input))
+                return;
+            var task = _psash.Execute(input);
+            task.Wait();
         }
         #endregion
 

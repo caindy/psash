@@ -14,23 +14,26 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Controls;
 using System.Diagnostics;
+using System.Reactive.Linq;
 
 namespace PSash
 {
     internal class PSashHost : PSHost, IHostSupportsInteractiveSession, IDisposable
     {
+        private PSashHostUIAdapter _psashHostUIAdapter;
         public override PSHostUserInterface UI
         {
             get
             {
-                return new PSashHostUIAdapter(_visualizationFactory.DefaultVisualizer);
+                return (_psashHostUIAdapter ?? (_psashHostUIAdapter = new PSashHostUIAdapter(_visualizationFactory))) as PSHostUserInterface;
             }
         }
 
-        private IVisualizationFactory _visualizationFactory;
-        public PSashHost(IVisualizationFactory visualizationFactory)
+        private IConsoleWriterProvider _visualizationFactory;
+        public PSashHost(IConsoleWriterProvider visualizationFactory)
         {
             _visualizationFactory = visualizationFactory;
+            PushRunspace(RunspaceFactory.CreateRunspace(this));
         }
 
         #region runspaces
@@ -62,14 +65,15 @@ namespace PSash
         
         public void PopRunspace()
         {
-            if (Runspaces.Count > 1)
-                Runspaces.Pop().Close();
+            var runspace = Runspaces.Pop();
+            if(runspace.RunspaceAvailability != RunspaceAvailability.None) 
+                runspace.CloseAsync();
         }
 
         public void PushRunspace(Runspace runspace)
         {
             Runspaces.Push(runspace);
-            if (runspace.RunspaceAvailability != RunspaceAvailability.Available) runspace.Open();
+            if (runspace.RunspaceAvailability != RunspaceAvailability.Available) runspace.OpenAsync();
         }
 
         public Runspace Runspace
@@ -89,45 +93,28 @@ namespace PSash
         
         #endregion
 
-        private Collection<PSObject> exec(PowerShell pipeline, string cmd = "", IEnumerable<object> input = null, bool sendToDefault = false)
-        {
-            pipeline.Runspace = CurrentRunspace;
-            if(!String.IsNullOrEmpty(cmd))
-                pipeline.AddScript(cmd);
-
-            if (sendToDefault)
-            {
-                // Add the default outputter to the end of the pipe and then 
-                // call the MergeMyResults method to merge the output and 
-                // error streams from the pipeline. This will result in the 
-                // output being written using the PSHost and PSHostUserInterface 
-                // classes instead of returning objects to the host application.
-                pipeline.AddCommand("out-default");
-                pipeline.Commands.Commands[0].MergeMyResults(PipelineResultTypes.Error, PipelineResultTypes.Output);
-            }
-
-            // If there is any input pass it in, otherwise just invoke the
-            // the pipeline.
-            if (input == null)
-                return pipeline.Invoke();
-            else
-                return pipeline.Invoke(input);
-
-        }
-
-        public void Execute(string cmd)
+        public Task Execute(string cmd)
         {
             var psashCmd = PSashCommands.From(cmd);
             if (psashCmd == null)
             {
-                using (var pipeline = PowerShell.Create())
+                var pipeline = PowerShell.Create();
+                pipeline.Runspace = CurrentRunspace;
+                if (!String.IsNullOrEmpty(cmd))
+                    pipeline.AddScript(cmd);
+                var pipelineTask = Task.Run(() => pipeline.Invoke());
+
+                pipelineTask.ContinueWith(t =>
                 {
-                    Runspaces.Clear();
-                    var result = exec(pipeline, cmd);
-                    exec(pipeline, input: result, sendToDefault: true);
-                }
+                    _psashHostUIAdapter.BeginExecutePipeline();
+                    pipeline.AddCommand("out-default");
+                    pipeline.Commands.Commands[0].MergeMyResults(PipelineResultTypes.Error, PipelineResultTypes.Output);
+                    var outputTask = Task.Run(() => pipeline.Invoke(t.Result));
+                    outputTask.ContinueWith(_ => _psashHostUIAdapter.EndExecutePipeline());
+                });
+                return pipelineTask;
             }
-            ExecutePSashCommand(psashCmd);
+            return Task.Run(() => ExecutePSashCommand(psashCmd));
         }
 
         private string ExecutePSashCommand(PSashCommands.PSashCommand psashCmd)
