@@ -7,6 +7,7 @@ using System.Management.Automation;
 using System.Management.Automation.Host;
 using System.Security;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -154,7 +155,6 @@ namespace PSash
         {
             _writer.Write(sb.ToString());
         }
-
 
         public override void Write(string value)
         {

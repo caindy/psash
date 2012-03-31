@@ -93,28 +93,43 @@ namespace PSash
         
         #endregion
 
+
+        private PowerShell GetPipeline()
+        {
+            var pipeline = PowerShell.Create();
+            pipeline.Runspace = CurrentRunspace;
+            return pipeline;
+        }
+
+        private Mutex _outputMutex = new Mutex();
         public Task Execute(string cmd)
         {
             var psashCmd = PSashCommands.From(cmd);
-            if (psashCmd == null)
-            {
-                var pipeline = PowerShell.Create();
-                pipeline.Runspace = CurrentRunspace;
-                if (!String.IsNullOrEmpty(cmd))
-                    pipeline.AddScript(cmd);
-                var pipelineTask = Task.Run(() => pipeline.Invoke());
+            if (psashCmd != null)
+                return Task.Run(() => ExecutePSashCommand(psashCmd));
 
-                pipelineTask.ContinueWith(t =>
+            var pipeline = GetPipeline();
+            if (!String.IsNullOrEmpty(cmd))
+                pipeline.AddScript(cmd);
+            var pipelineTask = Task.Run(() => pipeline.Invoke());
+            pipelineTask.ContinueWith(t =>
+            {
+                pipeline.Dispose();
+                pipeline = GetPipeline();
+                var mutex = new Mutex(initiallyOwned: true);
+                var outputTask = Task.Run(() =>
                 {
+                    _outputMutex.WaitOne();
                     _psashHostUIAdapter.BeginExecutePipeline();
                     pipeline.AddCommand("out-default");
                     pipeline.Commands.Commands[0].MergeMyResults(PipelineResultTypes.Error, PipelineResultTypes.Output);
-                    var outputTask = Task.Run(() => pipeline.Invoke(t.Result));
-                    outputTask.ContinueWith(_ => _psashHostUIAdapter.EndExecutePipeline());
+                    pipeline.Invoke(t.Result);
+                    pipeline.Dispose();
+                    _psashHostUIAdapter.EndExecutePipeline();
+                    _outputMutex.ReleaseMutex();
                 });
-                return pipelineTask;
-            }
-            return Task.Run(() => ExecutePSashCommand(psashCmd));
+            });
+            return pipelineTask;
         }
 
         private string ExecutePSashCommand(PSashCommands.PSashCommand psashCmd)

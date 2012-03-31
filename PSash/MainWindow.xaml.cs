@@ -55,12 +55,12 @@ namespace PSash
             _psash.Runspace.AvailabilityChanged += (_, ev) =>
             {
                 if(ev.RunspaceAvailability == RunspaceAvailability.Available)
-                   Dispatcher.InvokeAsync(() => SetCurrentLocation());
+                   Dispatcher.InvokeAsync(() => SetPrompt());
             };
             base.OnInitialized(e);
         }
 
-        private void SetCurrentLocation()
+        private void SetPrompt()
         {
             Prompt.Content = _psash.Runspace.SessionStateProxy.Path.CurrentLocation;
         }
@@ -68,16 +68,16 @@ namespace PSash
         #region key bindings
         void ExitInsertMode()
         {
-            this.PreviewKeyUp -= CaptureEscapeInsertMode;
-            this.PreviewKeyUp += CaptureEnterInsertMode;
+            PreviewKeyUp -= CaptureEscapeInsertMode;
+            PreviewKeyUp += CaptureEnterInsertMode;
             Editor.IsReadOnly = Editor.IsReadOnlyCaretVisible = true;
         }
 
         void EnterInsertMode()
         {
             Editor.IsReadOnly = Editor.IsReadOnlyCaretVisible = false;
-            this.PreviewKeyUp += CaptureEscapeInsertMode;
-            this.PreviewKeyUp -= CaptureEnterInsertMode;
+            PreviewKeyUp += CaptureEscapeInsertMode;
+            PreviewKeyUp -= CaptureEnterInsertMode;
             Editor.Focus();
         }
 
@@ -113,7 +113,6 @@ namespace PSash
             {
                 e.Handled = true;
                 SendCommand();
-                SetCurrentLocation();
             }
         }
         #endregion
@@ -203,7 +202,7 @@ namespace PSash
             if (String.IsNullOrWhiteSpace(input))
                 return;
             var task = _psash.Execute(input);
-            task.Wait();
+            task.ContinueWith(_ => Dispatcher.InvokeAsync(() => SetPrompt()));
         }
         #endregion
 
