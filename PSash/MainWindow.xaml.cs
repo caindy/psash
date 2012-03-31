@@ -55,14 +55,14 @@ namespace PSash
             _psash.Runspace.AvailabilityChanged += (_, ev) =>
             {
                 if(ev.RunspaceAvailability == RunspaceAvailability.Available)
-                   Dispatcher.InvokeAsync(() => SetPrompt());
+                   SetPrompt();
             };
             base.OnInitialized(e);
         }
 
         private void SetPrompt()
         {
-            Prompt.Content = _psash.Runspace.SessionStateProxy.Path.CurrentLocation;
+            Dispatcher.InvokeAsync(() => Prompt.Content = _psash.Runspace.SessionStateProxy.Path.CurrentLocation);
         }
 
         #region key bindings
@@ -202,7 +202,7 @@ namespace PSash
             if (String.IsNullOrWhiteSpace(input))
                 return;
             var task = _psash.Execute(input);
-            task.ContinueWith(_ => Dispatcher.InvokeAsync(() => SetPrompt()));
+            task.ContinueWith(_ => SetPrompt());
         }
         #endregion
 

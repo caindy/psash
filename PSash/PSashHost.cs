@@ -119,14 +119,20 @@ namespace PSash
                 var mutex = new Mutex(initiallyOwned: true);
                 var outputTask = Task.Run(() =>
                 {
-                    _outputMutex.WaitOne();
-                    _psashHostUIAdapter.BeginExecutePipeline();
-                    pipeline.AddCommand("out-default");
-                    pipeline.Commands.Commands[0].MergeMyResults(PipelineResultTypes.Error, PipelineResultTypes.Output);
-                    pipeline.Invoke(t.Result);
-                    pipeline.Dispose();
-                    _psashHostUIAdapter.EndExecutePipeline();
-                    _outputMutex.ReleaseMutex();
+                    try
+                    {
+                        _outputMutex.WaitOne();
+                        _psashHostUIAdapter.BeginExecutePipeline();
+                        pipeline.AddCommand("out-default");
+                        pipeline.Commands.Commands[0].MergeMyResults(PipelineResultTypes.Error, PipelineResultTypes.Output);
+                        pipeline.Invoke(t.Result);
+                        pipeline.Dispose();
+                        _psashHostUIAdapter.EndExecutePipeline();
+                    }
+                    finally
+                    {
+                        _outputMutex.ReleaseMutex();
+                    }
                 });
             });
             return pipelineTask;
