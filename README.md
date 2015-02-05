@@ -18,3 +18,12 @@ USAGE:
 --------
 Windows + ` : this toggles visibility of the shell
 To execute a command, highlight the text and hit SHIFT + ENTER
+
+Links:
+* http://psget.net/
+* https://github.com/lzybkr/PSReadLine
+* https://chocolatey.org/
+* http://bliker.github.io/cmder/
+* http://mridgers.github.io/clink/
+* http://www.nuget.org/
+* https://msysgit.github.io/
